@@ -30,7 +30,7 @@ import (
 
 var (
 	client       *types.Client
-	expandedMode bool // Tracks if the user has enabled '\x' expanded vertical display
+	expandedMode bool
 	vaultHeader  = "$AMARA_VAULT;1.1;AES256\n"
 )
 
@@ -40,7 +40,8 @@ func main() {
 
 	cfg, err := loadCLICredentials()
 	if err != nil {
-		slog.Warn("Could not load credentials cleanly, falling back to defaults", "error", err)
+		slog.Error("Could not load credentials cleanly", "error", err)
+		os.Exit(1)
 	}
 
 	c, err := connection.NewClient(cfg)
@@ -65,7 +66,8 @@ func main() {
 func loadCLICredentials() (types.Config, error) {
 	secKeyBase64 := os.Getenv("AMARA_SECURITY_KEY")
 	if secKeyBase64 == "" || len(secKeyBase64) != 64 {
-		return types.Config{}, fmt.Errorf("AMARA_SECURITY_KEY is missing or invalid. Must be a 64-character base64 string. Boot aborted")
+		slog.Error("AMARA_SECURITY_KEY is missing or invalid. Must be a 64-character base64 string. Boot aborted")
+		os.Exit(1)
 	}
 
 	secKey, err := base64.StdEncoding.DecodeString(secKeyBase64)
