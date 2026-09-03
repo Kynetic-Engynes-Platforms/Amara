@@ -1,20 +1,29 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"time"
 
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/connection"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/documents"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/connection"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/documents"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 	"github.com/c-bata/go-prompt"
 	"github.com/urfave/cli/v3"
 )
@@ -22,6 +31,7 @@ import (
 var (
 	client       *types.Client
 	expandedMode bool // Tracks if the user has enabled '\x' expanded vertical display
+	vaultHeader  = "$AMARA_VAULT;1.1;AES256\n"
 )
 
 func main() {
@@ -40,30 +50,40 @@ func main() {
 	}
 	client = c
 
-	fmt.Println("Typesense Shell (tsql) v1.0.0")
+	fmt.Println("Amara Shell (aql) v1.0.0")
 	fmt.Println("Type 'help' for available commands, '\\x' for expanded display, '\\q' or 'exit' to quit.")
 
 	p := prompt.New(
 		executor,
 		completer,
-		prompt.OptionPrefix("tsql=> "),
-		prompt.OptionTitle("tsql"),
+		prompt.OptionPrefix("aql=> "),
+		prompt.OptionTitle("aql"),
 	)
 	p.Run()
 }
 
-// loadCLICredentials safely resolves Typesense configuration via 12-factor env vars or fallback file.
 func loadCLICredentials() (types.Config, error) {
+	secKeyBase64 := os.Getenv("AMARA_SECURITY_KEY")
+	if secKeyBase64 == "" || len(secKeyBase64) != 64 {
+		return types.Config{}, fmt.Errorf("AMARA_SECURITY_KEY is missing or invalid. Must be a 64-character base64 string. Boot aborted")
+	}
+
+	secKey, err := base64.StdEncoding.DecodeString(secKeyBase64)
+	if err != nil {
+		return types.Config{}, fmt.Errorf("invalid base64 in AMARA_SECURITY_KEY: %w", err)
+	}
+
+	if len(secKey) > 32 {
+		secKey = secKey[:32]
+	}
+
 	cfg := types.Config{}
 
-	if key := os.Getenv("TYPESENSE_API_KEY"); key != "" {
-		cfg.APIKey = key
-	}
-	if nodes := os.Getenv("TYPESENSE_NODES"); nodes != "" {
-		cfg.Nodes = strings.Split(nodes, ",")
-	}
-
-	if cfg.APIKey != "" && len(cfg.Nodes) > 0 {
+	apiEnv := os.Getenv("AMARA_TYPESENSE_API_KEY")
+	nodesEnv := os.Getenv("AMARA_TYPESENSE_NODES")
+	if apiEnv != "" && nodesEnv != "" {
+		cfg.APIKey = apiEnv
+		cfg.Nodes = strings.Split(nodesEnv, ",")
 		return cfg, nil
 	}
 
@@ -71,29 +91,140 @@ func loadCLICredentials() (types.Config, error) {
 	if err != nil {
 		return cfg, err
 	}
+	dirPath := filepath.Join(home, ".amara")
+	path := filepath.Join(dirPath, "creds.json")
 
-	path := filepath.Join(home, ".typesense-go", "creds.json")
-	file, err := os.Open(path)
+	fileInfo, err := os.Stat(path)
+	if err == nil && !fileInfo.IsDir() {
+		encryptedBytes, err := os.ReadFile(path)
+		if err != nil {
+			return cfg, err
+		}
+
+		decryptedData, err := decryptAnsibleVaultStyle(string(encryptedBytes), secKey)
+		if err != nil {
+			return cfg, fmt.Errorf("failed to decrypt creds.json: %w", err)
+		}
+
+		if err := json.Unmarshal(decryptedData, &cfg); err != nil {
+			return types.Config{}, fmt.Errorf("invalid JSON in decrypted creds.json: %w", err)
+		}
+		return cfg, nil
+	}
+
+	fmt.Println("Credentials not found. Entering configuration edit mode...")
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("Enter Typesense API Key: ")
+	apiKey, _ := reader.ReadString('\n')
+	cfg.APIKey = strings.TrimSpace(apiKey)
+
+	fmt.Print("Enter Typesense Nodes (comma-separated, e.g., http://node1:8108,http://node2:8108): ")
+	nodesStr, _ := reader.ReadString('\n')
+	nodes := strings.Split(strings.TrimSpace(nodesStr), ",")
+	for i := range nodes {
+		nodes[i] = strings.TrimSpace(nodes[i])
+	}
+	cfg.Nodes = nodes
+
+	cfgBytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
+		return cfg, fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	encryptedVaultData, err := encryptAnsibleVaultStyle(cfgBytes, secKey)
+	if err != nil {
+		return cfg, fmt.Errorf("encryption failed: %w", err)
+	}
+
+	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return cfg, err
 	}
-	defer file.Close()
 
-	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
-		return types.Config{}, fmt.Errorf("invalid JSON in creds.json: %w", err)
+	if err := os.WriteFile(path, []byte(encryptedVaultData), 0600); err != nil {
+		return cfg, err
 	}
 
+	fmt.Println("Credentials securely saved to ~/.amara/creds.json")
 	return cfg, nil
 }
 
-// executor routes raw string input from the REPL prompt into the urfave CLI parser.
+func encryptAnsibleVaultStyle(plaintext, key []byte) (string, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
+	hexData := hex.EncodeToString(ciphertext)
+
+	var formattedHex strings.Builder
+	for i := 0; i < len(hexData); i += 80 {
+		end := i + 80
+		if end > len(hexData) {
+			end = len(hexData)
+		}
+		formattedHex.WriteString(hexData[i:end])
+		formattedHex.WriteString("\n")
+	}
+
+	return vaultHeader + formattedHex.String(), nil
+}
+
+func decryptAnsibleVaultStyle(vaultData string, key []byte) ([]byte, error) {
+	if !strings.HasPrefix(vaultData, vaultHeader) {
+		return nil, fmt.Errorf("missing or invalid AMARA_VAULT header")
+	}
+
+	hexData := strings.TrimPrefix(vaultData, vaultHeader)
+	hexData = strings.ReplaceAll(hexData, "\n", "")
+	hexData = strings.ReplaceAll(hexData, "\r", "")
+
+	ciphertext, err := hex.DecodeString(hexData)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	nonceSize := gcm.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+
+	nonce, actualCiphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	plaintext, err := gcm.Open(nil, nonce, actualCiphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return plaintext, nil
+}
+
 func executor(in string) {
 	in = strings.TrimSpace(in)
 	if in == "" {
 		return
 	}
 
-	// Intercept REPL-specific meta-commands (like psql)
 	switch in {
 	case "exit", "quit", "\\q":
 		fmt.Println("Goodbye.")
@@ -106,9 +237,41 @@ func executor(in string) {
 			fmt.Println("Expanded display is off.")
 		}
 		return
+	case "\\config":
+		secKeyBase64 := os.Getenv("AMARA_SECURITY_KEY")
+		if secKeyBase64 == "" || len(secKeyBase64) != 64 {
+			fmt.Println("Error: AMARA_SECURITY_KEY is missing or invalid. Cannot edit configuration.")
+			return
+		}
+		secKey, _ := base64.StdEncoding.DecodeString(secKeyBase64)
+		if len(secKey) > 32 {
+			secKey = secKey[:32]
+		}
+
+		home, err := os.UserHomeDir()
+		if err == nil {
+			dirPath := filepath.Join(home, ".amara")
+			path := filepath.Join(dirPath, "creds.json")
+
+			newCfg, err := runInteractiveSetup(secKey, dirPath, path)
+			if err != nil {
+				fmt.Printf("Failed to save configuration: %v\n", err)
+				return
+			}
+
+			// Hot-swap the client instance so the new credentials take effect immediately
+			newClient, err := connection.NewClient(newCfg)
+			if err != nil {
+				fmt.Printf("Warning: Failed to initialize new client connection: %v\n", err)
+			} else {
+				client = newClient
+				fmt.Println("Client connection successfully re-established with new credentials.")
+			}
+		}
+		return
 	}
 
-	args := append([]string{"tsql"}, parseArgs(in)...)
+	args := append([]string{"aql"}, parseArgs(in)...)
 	cmd := buildCLI()
 
 	if err := cmd.Run(context.Background(), args); err != nil {
@@ -116,9 +279,73 @@ func executor(in string) {
 	}
 }
 
+// runInteractiveSetup prompts the user for configuration, validates connectivity,
+// encrypts it, saves it to disk, and returns the newly minted config.
+func runInteractiveSetup(secKey []byte, dirPath, filePath string) (types.Config, error) {
+	fmt.Println("Entering configuration edit mode...")
+	reader := bufio.NewReader(os.Stdin)
+	cfg := types.Config{}
+
+	// Loop until the user provides valid, reachable credentials
+	for {
+		fmt.Print("Enter Typesense API Key: ")
+		apiKey, _ := reader.ReadString('\n')
+		cfg.APIKey = strings.TrimSpace(apiKey)
+
+		fmt.Print("Enter Typesense Nodes (comma-separated, e.g., http://node1:8108,http://node2:8108): ")
+		nodesStr, _ := reader.ReadString('\n')
+		nodes := strings.Split(strings.TrimSpace(nodesStr), ",")
+
+		var cleanedNodes []string
+		for _, n := range nodes {
+			cleaned := strings.TrimSpace(n)
+			if cleaned != "" {
+				cleanedNodes = append(cleanedNodes, cleaned)
+			}
+		}
+		cfg.Nodes = cleanedNodes
+
+		if len(cfg.Nodes) == 0 {
+			fmt.Println("Error: At least one node URL is required. Please try again.")
+			continue
+		}
+
+		fmt.Println("Testing connectivity to provided nodes...")
+		if err := validateNodes(cfg.Nodes, cfg.APIKey); err != nil {
+			fmt.Printf("Connectivity test failed: %v\n", err)
+			fmt.Println("Please verify your API key and Node URLs, ensuring the Typesense cluster is running, and try again.")
+			continue
+		}
+
+		fmt.Println("All nodes successfully validated!")
+		break // Exit the loop since validation passed
+	}
+
+	cfgBytes, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return cfg, fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	encryptedVaultData, err := encryptAnsibleVaultStyle(cfgBytes, secKey)
+	if err != nil {
+		return cfg, fmt.Errorf("encryption failed: %w", err)
+	}
+
+	if err := os.MkdirAll(dirPath, 0700); err != nil {
+		return cfg, err
+	}
+
+	if err := os.WriteFile(filePath, []byte(encryptedVaultData), 0600); err != nil {
+		return cfg, err
+	}
+
+	fmt.Println("Credentials securely saved to", filePath)
+	return cfg, nil
+}
+
 func buildCLI() *cli.Command {
 	return &cli.Command{
-		Name:  "tsql",
+		Name:  "aql",
 		Usage: "Typesense interactive CLI",
 		Commands: []*cli.Command{
 			{
@@ -271,17 +498,14 @@ func buildCLI() *cli.Command {
 	}
 }
 
-// printOutput delegates formatting to printer.go depending on the current expandedMode state.
-// (Note: Requires renderTable and renderVertical to be defined in printer.go)
 func printOutput(data any) {
 	if expandedMode {
-		renderExpanded(data) // Defined in printer.go
+		renderExpanded(data)
 	} else {
-		renderTable(data) // Defined in printer.go
+		renderTable(data)
 	}
 }
 
-// completer provides auto-complete suggestions for the go-prompt REPL.
 func completer(d prompt.Document) []prompt.Suggest {
 	s := []prompt.Suggest{
 		{Text: "collections", Description: "List, view or delete collections"},
@@ -291,12 +515,12 @@ func completer(d prompt.Document) []prompt.Suggest {
 		{Text: "health", Description: "Cluster health check"},
 		{Text: "metrics", Description: "Typesense cluster metrics"},
 		{Text: "\\x", Description: "Toggle expanded vertical output"},
-		{Text: "\\q", Description: "Exit tsql"},
+		{Text: "\\config", Description: "Interactively update and encrypt credentials"},
+		{Text: "\\q", Description: "Exit aql"},
 	}
 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 }
 
-// parseArgs gracefully handles strings containing quoted phrases (e.g., search col -q "San Francisco").
 func parseArgs(input string) []string {
 	var args []string
 	var current strings.Builder
@@ -324,4 +548,36 @@ func parseArgs(input string) []string {
 	}
 
 	return args
+}
+
+// validateNodes tests connectivity to the /health endpoint of each provided node.
+func validateNodes(nodes []string, apiKey string) error {
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	for _, n := range nodes {
+		// Ensure the URL is properly formatted for the health check
+		url := strings.TrimRight(n, "/") + "/health"
+
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return fmt.Errorf("invalid URL format for %s: %v", n, err)
+		}
+
+		// Pass the API key as required by Typesense operations
+		req.Header.Set("X-TYPESENSE-API-KEY", apiKey)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to connect to %s: %v", n, err)
+		}
+
+		// Always close the body to prevent connection leaks
+		resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("node %s responded with status %d", n, resp.StatusCode)
+		}
+	}
+
+	return nil
 }

@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	dorequest "github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/do_request"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/ops"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	dorequest "github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/do_request"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/ops"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 )
 
 type DocumentsService[T any] struct {

@@ -64,7 +64,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0 
         run: |
-          BINARY_NAME=tsql-${{ matrix.goos }}-${{ matrix.goarch }}
+          BINARY_NAME=aql-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
             BINARY_NAME=${BINARY_NAME}.exe
           fi
@@ -76,7 +76,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
-          files: tsql-${{ matrix.goos }}-${{ matrix.goarch }}*
+          files: aql-${{ matrix.goos }}-${{ matrix.goarch }}*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

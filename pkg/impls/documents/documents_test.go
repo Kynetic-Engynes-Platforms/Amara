@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/connection"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/documents"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/connection"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/documents"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

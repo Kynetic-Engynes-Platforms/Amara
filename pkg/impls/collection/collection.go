@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/url"
 
-	adminservices "github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/admin_services"
-	dorequest "github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/do_request"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/documents"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	adminservices "github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/admin_services"
+	dorequest "github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/do_request"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/documents"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 )
 
 type CollectionsService struct {

@@ -1,4 +1,4 @@
-# Typesense Go SDK & tsql CLI
+# AMARA
 
 A robust, memory-efficient Typesense client and interactive REPL CLI powered by Go generics.
 
@@ -12,7 +12,7 @@ A robust, memory-efficient Typesense client and interactive REPL CLI powered by 
   * [Installation](#installation)
 * [Usage](#-usage)
   * [Using the SDK](#using-the-sdk)
-  * [Using the CLI (tsql)](#using-the-cli-tsql)
+  * [Using the CLI (aql)](#using-the-cli-aql)
 * [Configuration](#-configuration)
 * [Adding Features & Contributing](#-adding-features--contributing)
 
@@ -21,14 +21,14 @@ A robust, memory-efficient Typesense client and interactive REPL CLI powered by 
 This project provides a comprehensive Go integration for Typesense. It consists of two primary components designed for institutional-grade deployments:
 
 1. **The SDK:** A modular Go client that interfaces with the Typesense API. It handles cluster node routing and failover via an atomic, lock-free `NodeManager`, implements context-aware retry policies, and utilizes Go generics (`[T any]`) to provide type-safe document operations. It also supports memory-efficient bulk imports via `io.Reader` streaming.
-2. **The CLI (`tsql`):** An interactive terminal shell built using `urfave/cli/v3` and `go-prompt`. It supports executing raw search queries, collection management, real-time metrics, and horizontal/vertical `\x` formatting, emulating `psql` styling.
+2. **The CLI (`aql`):** An interactive terminal shell built using `urfave/cli/v3` and `go-prompt`. It supports executing raw search queries, collection management, real-time metrics, and horizontal/vertical `\x` formatting, emulating `psql` styling.
 
 ### Features
 
 * **Type-Safe Document Operations:** Leverage Go generics (`[T any]`) for strict typing when interacting with documents, or map to `map[string]any` for schemaless data.
 * **Resilient Node Management:** Automatic failover, context-aware retries, and lock-free atomic health tracking via the `NodeManager`.
 * **Memory-Efficient Imports:** Stream large JSONL datasets directly to Typesense via the `ImportStream` method without buffering entirely into memory.
-* **Interactive CLI (`tsql`):** A powerful REPL with auto-completion, tabular output, and a vertical expanded mode (`\x`) for deeply nested JSON.
+* **Interactive CLI (`aql`):** A powerful REPL with auto-completion, tabular output, and a vertical expanded mode (`\x`) for deeply nested JSON.
 * **12-Factor App Ready:** Configuration securely managed via environment variables with a fallback to local credential files.
 
 ### Tech Stack
@@ -49,18 +49,18 @@ This project provides a comprehensive Go integration for Typesense. It consists 
 
 ### Installation
 
-You can install the `tsql` CLI using one of the following methods:
+You can install the `aql` CLI using one of the following methods:
 
 #### Option 1: Pre-built Binaries (Recommended)
 Our automated CI/CD pipeline attaches pre-compiled, standalone binaries for Linux (Arch, RHEL, Ubuntu, etc.), macOS, and Windows across both AMD64 and ARM64 architectures to every release.
 
-1. Navigate to the [Releases page](https://github.com/Kynetic-Engynes-Platforms/typesense-go/releases) of this repository.
-2. Download the latest version corresponding to your operating system and architecture (e.g., `tsql-linux-amd64`).
+1. Navigate to the [Releases page](https://github.com/Kynetic-Engynes-Platforms/amara/releases) of this repository.
+2. Download the latest version corresponding to your operating system and architecture (e.g., `aql-linux-amd64`).
 3. Make the binary executable and move it to your system's PATH:
    
 ```bash
-   chmod +x tsql-linux-amd64
-   sudo mv tsql-linux-amd64 /usr/local/bin/tsql
+   chmod +x aql-linux-amd64
+   sudo mv aql-linux-amd64 /usr/local/bin/aql
 ```
 
 
@@ -69,14 +69,14 @@ If you prefer to compile the application yourself, ensure you have Go installed 
 
 ```bash
 # Clone the repository
-git clone [https://github.com/Kynetic-Engynes-Platforms/typesense-go.git](https://github.com/Kynetic-Engynes-Platforms/typesense-go.git)
-cd typesense-go
+git clone [https://github.com/Kynetic-Engynes-Platforms/amara.git](https://github.com/Kynetic-Engynes-Platforms/amara.git)
+cd amara
 
 # Build the CLI binary
-go build -o tsql ./pkg/cmd/ 
+go build -o aql ./pkg/cmd/ 
 
 # Make it globally accessible (optional)
-sudo mv tsql /usr/local/bin/
+sudo mv aql /usr/local/bin/
 ```
 
 
@@ -97,9 +97,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/connection"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/connection"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 )
 
 // 1. Define your strict schema
@@ -152,12 +152,12 @@ func main() {
 ```
 
 
-### Using the CLI (tsql)
+### Using the CLI (aql)
 
 Launch the binary to enter the interactive shell:
 
 ```bash
-./tsql
+./aql
 ```
 
 
@@ -191,10 +191,12 @@ The client and CLI securely resolve configurations in the following order (adher
 
 1. Environment Variables (Primary):
 
-        * TYPESENSE_API_KEY: Your Typesense server API key.
+        * AMARA_SECURITY_KEY : 32-Byte key used for encryption and decryption.
 
-        * TYPESENSE_NODES: A comma-separated list of your node URLs (e.g., http://node1:8108,http://node2:8108).
+		* AMARA_TYPESENSE_API_KEY: Your Typesense server API key.
+
+        * AMARA_TYPESENSE_NODES: A comma-separated list of your node URLs (e.g., http://node1:8108,http://node2:8108).
 
 2. Fallback Credentials File (creds.json):
     
-    If environment variables are absent, the CLI attempts to read from ~/.typesense-go/creds.json.
+    If environment variables are absent, the CLI attempts to read from ~/.amara/creds.json.

@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 )
 
 // HTTPClient defines the interface for making HTTP requests, allowing for easy mocking during tests.

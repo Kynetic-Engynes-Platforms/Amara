@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"net/url"
 
-	dorequest "github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/do_request"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
+	dorequest "github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/do_request"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types/schemas"
 )
 
 type OverridesService struct {

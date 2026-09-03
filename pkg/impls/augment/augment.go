@@ -1,10 +1,10 @@
 package augment
 
 import (
-	adminservices "github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/admin_services"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/collection"
-	nodemanager "github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/node_manager"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
+	adminservices "github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/admin_services"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/collection"
+	nodemanager "github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/node_manager"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
 )
 
 func AugmentedClient(client *types.Client, cfg types.Config) (*types.Client, error) {

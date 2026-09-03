@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/ops"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/ops"
 )
 
 type Node struct {

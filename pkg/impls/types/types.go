@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/ops"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/ops"
 )
 
 // APIError represents structured error responses returned by Typesense server.

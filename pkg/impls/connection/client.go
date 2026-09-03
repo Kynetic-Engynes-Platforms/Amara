@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/augment"
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/augment"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
 )
 
 func NewClient(cfg types.Config) (*types.Client, error) {

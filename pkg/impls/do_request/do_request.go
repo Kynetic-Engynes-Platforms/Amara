@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/types"
 )
 
 // DoRequest executes an HTTP request across configured nodes with automatic retry and failover.

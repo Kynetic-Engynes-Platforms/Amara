@@ -1,4 +1,4 @@
-module github.com/Kynetic-Engynes-Platforms/typesense-go
+module github.com/Kynetic-Engynes-Platforms/amara
 
 go 1.26.2
 
