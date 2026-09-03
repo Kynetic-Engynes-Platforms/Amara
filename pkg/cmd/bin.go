@@ -4,40 +4,42 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/sdk"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/connection"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/documents"
+
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
 	"github.com/c-bata/go-prompt"
 	"github.com/urfave/cli/v3"
 )
 
 var (
-	client       *sdk.Client
+	client       *types.Client
 	expandedMode bool // Tracks if the user has enabled '\x' expanded vertical display
 )
 
 func main() {
-	// 1. CLI owns the credentials loading, keeping the SDK environment-agnostic.
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	slog.SetDefault(logger)
+
 	cfg, err := loadCLICredentials()
 	if err != nil {
-		fmt.Printf("Notice: Could not load creds.json, falling back to defaults (%v)\n", err)
-		cfg = sdk.Config{
-			Nodes:  []string{"http://localhost:8108"},
-			APIKey: "xyz", // Default for local testing
-		}
+		slog.Warn("Could not load credentials cleanly, falling back to defaults", "error", err)
 	}
 
-	// 2. Initialize the pure SDK client
-	c, err := sdk.NewClient(cfg)
+	c, err := connection.NewClient(cfg)
 	if err != nil {
-		fmt.Printf("Fatal: Client initialization failed: %v\n", err)
+		slog.Error("Client initialization failed", "error", err)
 		os.Exit(1)
 	}
 	client = c
 
-	// 3. Start the interactive REPL
 	fmt.Println("Typesense Shell (tsql) v1.0.0")
 	fmt.Println("Type 'help' for available commands, '\\x' for expanded display, '\\q' or 'exit' to quit.")
 
@@ -50,23 +52,35 @@ func main() {
 	p.Run()
 }
 
-// loadCLICredentials securely loads Typesense configuration exclusively for the terminal session.
-func loadCLICredentials() (sdk.Config, error) {
+// loadCLICredentials safely resolves Typesense configuration via 12-factor env vars or fallback file.
+func loadCLICredentials() (types.Config, error) {
+	cfg := types.Config{}
+
+	if key := os.Getenv("TYPESENSE_API_KEY"); key != "" {
+		cfg.APIKey = key
+	}
+	if nodes := os.Getenv("TYPESENSE_NODES"); nodes != "" {
+		cfg.Nodes = strings.Split(nodes, ",")
+	}
+
+	if cfg.APIKey != "" && len(cfg.Nodes) > 0 {
+		return cfg, nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return sdk.Config{}, err
+		return cfg, err
 	}
 
 	path := filepath.Join(home, ".typesense-go", "creds.json")
 	file, err := os.Open(path)
 	if err != nil {
-		return sdk.Config{}, err
+		return cfg, err
 	}
 	defer file.Close()
 
-	var cfg sdk.Config
 	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
-		return sdk.Config{}, fmt.Errorf("invalid JSON in creds.json: %w", err)
+		return types.Config{}, fmt.Errorf("invalid JSON in creds.json: %w", err)
 	}
 
 	return cfg, nil
@@ -102,11 +116,10 @@ func executor(in string) {
 	}
 }
 
-// buildCLI defines the robust command surface area for the terminal application.
 func buildCLI() *cli.Command {
 	return &cli.Command{
 		Name:  "tsql",
-		Usage: "Typesense production interactive CLI",
+		Usage: "Typesense interactive CLI",
 		Commands: []*cli.Command{
 			{
 				Name:  "collections",
@@ -159,8 +172,8 @@ func buildCLI() *cli.Command {
 					}
 
 					// Instantiate a dynamic DocumentsService scoped to map[string]any for unpredictable schemas
-					docSvc := sdk.NewDocumentsService[map[string]any](client, colName)
-					params := sdk.SearchParams{
+					docSvc := documents.NewDocumentsService[map[string]any](client, colName)
+					params := schemas.SearchParams{
 						Q:        cmd.String("q"),
 						QueryBy:  cmd.String("query-by"),
 						FilterBy: cmd.String("filter-by"),

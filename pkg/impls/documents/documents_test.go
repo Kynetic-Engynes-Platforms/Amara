@@ -1,4 +1,4 @@
-package sdk_test
+package documents_test
 
 import (
 	"context"
@@ -10,7 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/sdk"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/connection"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/documents"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types"
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/types/schemas"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,10 +26,10 @@ type TestDoc struct {
 }
 
 // setupTestEnv initializes an httptest.Server and a wired SDK Client pointing to it.
-func setupTestEnv(t *testing.T, handler http.HandlerFunc) (*httptest.Server, *sdk.Client) {
+func setupTestEnv(t *testing.T, handler http.HandlerFunc) (*httptest.Server, *types.Client) {
 	server := httptest.NewServer(handler)
 
-	cfg := sdk.Config{
+	cfg := types.Config{
 		APIKey:         "test-secret-key",
 		Nodes:          []string{server.URL},
 		NumRetries:     1,
@@ -34,7 +37,7 @@ func setupTestEnv(t *testing.T, handler http.HandlerFunc) (*httptest.Server, *sd
 		HealthWaitTime: time.Second,
 	}
 
-	client, err := sdk.NewClient(cfg)
+	client, err := connection.NewClient(cfg)
 	require.NoError(t, err)
 
 	return server, client
@@ -56,7 +59,7 @@ func TestDocumentsService_Create(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 	doc := TestDoc{ID: "1", Title: "Go Programming", Views: 100}
 
 	res, err := svc.Create(context.Background(), doc)
@@ -79,7 +82,7 @@ func TestDocumentsService_Upsert(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	res, err := svc.Upsert(context.Background(), TestDoc{ID: "2", Title: "Upserted", Views: 50})
 
@@ -99,7 +102,7 @@ func TestDocumentsService_Update(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	res, err := svc.Update(context.Background(), "123", TestDoc{Title: "Updated"})
 
@@ -119,7 +122,7 @@ func TestDocumentsService_Retrieve(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	res, err := svc.Retrieve(context.Background(), "abc")
 
@@ -136,12 +139,12 @@ func TestDocumentsService_Retrieve_NotFound(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	_, err := svc.Retrieve(context.Background(), "missing")
 
 	require.Error(t, err)
-	var apiErr *sdk.APIError
+	var apiErr *types.APIError
 	require.ErrorAs(t, err, &apiErr)
 	assert.Equal(t, http.StatusNotFound, apiErr.StatusCode)
 	assert.Equal(t, "Document not found", apiErr.Message)
@@ -159,7 +162,7 @@ func TestDocumentsService_Delete(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	res, err := svc.Delete(context.Background(), "del-1")
 
@@ -180,7 +183,7 @@ func TestDocumentsService_DeleteByQuery(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	res, err := svc.DeleteByQuery(context.Background(), "views:>10")
 
@@ -199,9 +202,9 @@ func TestDocumentsService_Search(t *testing.T) {
 		assert.Equal(t, "views:desc", q.Get("sort_by"))
 		assert.Equal(t, "10", q.Get("per_page"))
 
-		mockResponse := sdk.SearchResult[TestDoc]{
+		mockResponse := schemas.SearchResult[TestDoc]{
 			Found: 1,
-			Hits: []sdk.SearchHit[TestDoc]{
+			Hits: []schemas.SearchHit[TestDoc]{
 				{Document: TestDoc{ID: "1", Title: "golang basics"}},
 			},
 		}
@@ -213,9 +216,9 @@ func TestDocumentsService_Search(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
-	params := sdk.SearchParams{
+	params := schemas.SearchParams{
 		Q:       "golang",
 		QueryBy: "title",
 		SortBy:  "views:desc",
@@ -253,7 +256,7 @@ func TestDocumentsService_ImportBatch(t *testing.T) {
 	server, client := setupTestEnv(t, handler)
 	defer server.Close()
 
-	svc := sdk.NewDocumentsService[TestDoc](client, "books")
+	svc := documents.NewDocumentsService[TestDoc](client, "books")
 
 	docs := []TestDoc{
 		{ID: "1", Title: "Doc 1"},

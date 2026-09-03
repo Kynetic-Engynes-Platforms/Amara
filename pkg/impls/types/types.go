@@ -1,8 +1,10 @@
-package sdk
+package types
 
 import (
 	"fmt"
 	"time"
+
+	"github.com/Kynetic-Engynes-Platforms/typesense-go/pkg/impls/ops"
 )
 
 // APIError represents structured error responses returned by Typesense server.
@@ -29,20 +31,20 @@ type Config struct {
 
 // Client is the thread-safe root SDK instance connecting all sub-services via interfaces.
 type Client struct {
-	config      Config
-	http        HTTPClient
-	nodes       NodeManager // Now an interface
-	Collections CollectionsService
-	Aliases     AliasesService
-	Keys        KeysService
-	Analytics   AnalyticsService
-	Operations  OperationsService
+	Config      Config
+	Http        ops.HTTPClient
+	Nodes       ops.NodeManager
+	Collections ops.CollectionsService
+	Aliases     ops.AliasesService
+	Keys        ops.KeysService
+	Analytics   ops.AnalyticsService
+	Operations  ops.OperationsService
 }
 
 // Collection represents a scoped handle to a single collection.
 type Collection[T any] struct {
 	Name      string
-	Documents DocumentsService[T]
-	Overrides OverridesService
-	Synonyms  SynonymsService
+	Documents ops.DocumentsService[T]
+	Overrides ops.OverridesService
+	Synonyms  ops.SynonymsService
 }

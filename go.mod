@@ -17,7 +17,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.29 // indirect
 	github.com/mattn/go-tty v0.0.8 // indirect
 	github.com/pkg/term v1.2.0-beta.2 // indirect
-	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect

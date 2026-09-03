@@ -1,4 +1,4 @@
-package sdk
+package schemas
 
 type OverrideMatchCondition struct {
 	Query string `json:"query"`
