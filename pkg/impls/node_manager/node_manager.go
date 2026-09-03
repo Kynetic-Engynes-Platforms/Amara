@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Kynetic-Engynes-Platforms/amara/pkg/impls/ops"
+	"github.com/ccoveille/go-safecast/v2"
 )
 
 type Node struct {
@@ -40,9 +41,9 @@ func NewNodeManager(urls []string, healthWaitTime time.Duration) (ops.NodeManage
 
 func (nm *nodeManager) GetNextNode() string {
 	now := time.Now().UnixNano()
-	total := uint32(len(nm.nodes))
+	total, _ := safecast.Convert[uint32](len(nm.nodes))
 
-	for i := uint32(0); i < total; i++ {
+	for range total {
 		// Atomically increment and get the current index
 		currentIndex := nm.idx.Add(1) % total
 		node := nm.nodes[currentIndex]

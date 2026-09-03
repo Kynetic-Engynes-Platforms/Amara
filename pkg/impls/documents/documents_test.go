@@ -18,14 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestDoc is a strictly typed struct to validate generic [T] behavior.
 type TestDoc struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Views int    `json:"views"`
 }
 
-// setupTestEnv initializes an httptest.Server and a wired SDK Client pointing to it.
 func setupTestEnv(t *testing.T, handler http.HandlerFunc) (*httptest.Server, *types.Client) {
 	server := httptest.NewServer(handler)
 
@@ -53,7 +51,7 @@ func TestDocumentsService_Create(t *testing.T) {
 		assert.JSONEq(t, `{"id":"1","title":"Go Programming","views":100}`, string(body))
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write(body) // Echo back
+		_, _ = w.Write(body)
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -76,7 +74,7 @@ func TestDocumentsService_Upsert(t *testing.T) {
 		assert.Equal(t, "upsert", r.URL.Query().Get("action"))
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"2","title":"Upserted","views":50}`))
+		_, _ = w.Write([]byte(`{"id":"2","title":"Upserted","views":50}`))
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -96,7 +94,7 @@ func TestDocumentsService_Update(t *testing.T) {
 		assert.Equal(t, "/collections/books/documents/123", r.URL.Path)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"123","title":"Updated","views":10}`))
+		_, _ = w.Write([]byte(`{"id":"123","title":"Updated","views":10}`))
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -116,7 +114,7 @@ func TestDocumentsService_Retrieve(t *testing.T) {
 		assert.Equal(t, "/collections/books/documents/abc", r.URL.Path)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"abc","title":"Found","views":1}`))
+		_, _ = w.Write([]byte(`{"id":"abc","title":"Found","views":1}`))
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -133,7 +131,7 @@ func TestDocumentsService_Retrieve(t *testing.T) {
 func TestDocumentsService_Retrieve_NotFound(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"Document not found"}`))
+		_, _ = w.Write([]byte(`{"message":"Document not found"}`))
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -156,7 +154,7 @@ func TestDocumentsService_Delete(t *testing.T) {
 		assert.Equal(t, "/collections/books/documents/del-1", r.URL.Path)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"del-1","title":"Deleted"}`))
+		_, _ = w.Write([]byte(`{"id":"del-1","title":"Deleted"}`))
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -177,7 +175,7 @@ func TestDocumentsService_DeleteByQuery(t *testing.T) {
 		assert.Equal(t, "views:>10", r.URL.Query().Get("filter_by"))
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"num_deleted":5}`))
+		_, _ = w.Write([]byte(`{"num_deleted":5}`))
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -210,7 +208,7 @@ func TestDocumentsService_Search(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}
 
 	server, client := setupTestEnv(t, handler)
@@ -250,7 +248,7 @@ func TestDocumentsService_ImportBatch(t *testing.T) {
 		assert.Contains(t, lines[1], `"id":"2"`)
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"success":true}\n{"success":true}`))
+		_, _ = w.Write([]byte(`{"success":true}\n{"success":true}`))
 	}
 
 	server, client := setupTestEnv(t, handler)

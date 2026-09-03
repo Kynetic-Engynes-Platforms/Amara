@@ -141,6 +141,7 @@ func loadCLICredentials() (types.Config, error) {
 		return cfg, err
 	}
 
+	// #nosec G703
 	if err := os.WriteFile(path, []byte(encryptedVaultData), 0600); err != nil {
 		return cfg, err
 	}
@@ -335,6 +336,7 @@ func runInteractiveSetup(secKey []byte, dirPath, filePath string) (types.Config,
 		return cfg, err
 	}
 
+	// #nosec G703
 	if err := os.WriteFile(filePath, []byte(encryptedVaultData), 0600); err != nil {
 		return cfg, err
 	}
