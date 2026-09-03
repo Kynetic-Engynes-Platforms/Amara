@@ -14,7 +14,7 @@ A robust, memory-efficient Typesense client and interactive REPL CLI for Go and 
   * [Using the SDK](#using-the-sdk)
   * [Using the CLI (aql)](#using-the-cli-aql)
 * [Configuration](#-configuration)
-* [Adding Features & Contributing](#-adding-features--contributing)
+
 
 ## About the Project
 

@@ -13,6 +13,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"os"
@@ -56,10 +58,7 @@ func main() {
 
 	defer func() {
 		if r := recover(); r != nil {
-			if r == "aql-exit" {
-				os.Exit(0)
-			}
-			panic(r)
+			cleanExit()
 		}
 	}()
 
@@ -74,8 +73,14 @@ func main() {
 
 func loadCLICredentials() (types.Config, error) {
 	secKeyBase64 := os.Getenv("AMARA_SECURITY_KEY")
-	if secKeyBase64 == "" || len(secKeyBase64) != 64 {
-		slog.Error("AMARA_SECURITY_KEY is missing or invalid. Must be a 64-character base64 string. Boot aborted")
+	if secKeyBase64 == "" {
+		slog.Error("AMARA_SECURITY_KEY is missing. Boot aborted")
+		os.Exit(1)
+	}
+
+	if len(secKeyBase64) != 64 {
+		// #nosec G706
+		slog.Error(fmt.Sprintf("AMARA_SECURITY_KEY has invalid length of %v. Must be a 64-character base64 string. Boot aborted", len(secKeyBase64)))
 		os.Exit(1)
 	}
 
@@ -238,8 +243,7 @@ func executor(in string) {
 
 	switch in {
 	case "exit", "quit", "\\q":
-		fmt.Println("Goodbye.")
-		os.Exit(0)
+		cleanExit()
 	case "\\x":
 		expandedMode = !expandedMode
 		if expandedMode {
@@ -590,4 +594,17 @@ func validateNodes(nodes []string, apiKey string) error {
 	}
 
 	return nil
+}
+
+func cleanExit() {
+	fmt.Println("Goodbye.")
+
+	// Windows does not use stty, so we only run this on Unix-based systems
+	if runtime.GOOS != "windows" {
+		cmd := exec.Command("stty", "-raw", "echo")
+		cmd.Stdin = os.Stdin
+		_ = cmd.Run()
+	}
+
+	os.Exit(0)
 }
