@@ -23,10 +23,10 @@ jobs:
           cache: true
 
       - name: Syntax & Linter Check (golangci-lint)
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: latest
-          args: --timeout=5m
+        run: |
+          echo "Compiling golangci-lint from source using Go 1.26..."
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          $(go env GOPATH)/bin/golangci-lint run --timeout=5m
 
       - name: Security Check (gosec)
         uses: securego/gosec@master
