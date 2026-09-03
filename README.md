@@ -1,6 +1,6 @@
 # AMARA
 
-A robust, memory-efficient Typesense client and interactive REPL CLI powered by Go generics.
+A robust, memory-efficient Typesense client and interactive REPL CLI for Go and everyone.
 
 ## Table of Contents
 
@@ -20,12 +20,13 @@ A robust, memory-efficient Typesense client and interactive REPL CLI powered by 
 
 This project provides a comprehensive Go integration for Typesense. It consists of two primary components designed for institutional-grade deployments:
 
-1. **The SDK:** A modular Go client that interfaces with the Typesense API. It handles cluster node routing and failover via an atomic, lock-free `NodeManager`, implements context-aware retry policies, and utilizes Go generics (`[T any]`) to provide type-safe document operations. It also supports memory-efficient bulk imports via `io.Reader` streaming.
-2. **The CLI (`aql`):** An interactive terminal shell built using `urfave/cli/v3` and `go-prompt`. It supports executing raw search queries, collection management, real-time metrics, and horizontal/vertical `\x` formatting, emulating `psql` styling.
+1. **The SDK:** A modular Go client that interfaces with the Typesense. It handles cluster node routing and failover via an atomic, lock-free `NodeManager`, implements context-aware retry policies, and utilizes Go generics to provide type-safe document operations. It also supports memory-efficient bulk imports via `io.Reader` streaming.
+
+2. **The CLI (`aql`):** An interactive terminal shell. It supports executing raw search queries, collection management, real-time metrics, and horizontal/vertical `\x` formatting, emulating `psql` styling.
 
 ### Features
 
-* **Type-Safe Document Operations:** Leverage Go generics (`[T any]`) for strict typing when interacting with documents, or map to `map[string]any` for schemaless data.
+* **Type-Safe Document Operations:** Leverage Go generics for strict typing when interacting with documents, or map to `map[string]any` for schemaless data.
 * **Resilient Node Management:** Automatic failover, context-aware retries, and lock-free atomic health tracking via the `NodeManager`.
 * **Memory-Efficient Imports:** Stream large JSONL datasets directly to Typesense via the `ImportStream` method without buffering entirely into memory.
 * **Interactive CLI (`aql`):** A powerful REPL with auto-completion, tabular output, and a vertical expanded mode (`\x`) for deeply nested JSON.
@@ -43,7 +44,7 @@ This project provides a comprehensive Go integration for Typesense. It consists 
 
 ### Prerequisites
 
-* Go 1.21 or higher (Project uses Go 1.26.2 per `go.mod`)
+* Go 1.21 or higher
 * A running Typesense server or cluster
 
 

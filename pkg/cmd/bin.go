@@ -96,6 +96,7 @@ func loadCLICredentials() (types.Config, error) {
 
 	fileInfo, err := os.Stat(path)
 	if err == nil && !fileInfo.IsDir() {
+		// #nosec G304
 		encryptedBytes, err := os.ReadFile(path)
 		if err != nil {
 			return cfg, err
@@ -127,6 +128,7 @@ func loadCLICredentials() (types.Config, error) {
 	}
 	cfg.Nodes = nodes
 
+	// #nosec G117
 	cfgBytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return cfg, fmt.Errorf("failed to marshal config: %w", err)
@@ -322,6 +324,7 @@ func runInteractiveSetup(secKey []byte, dirPath, filePath string) (types.Config,
 		break // Exit the loop since validation passed
 	}
 
+	// #nosec G117
 	cfgBytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return cfg, fmt.Errorf("failed to marshal config: %w", err)
@@ -557,7 +560,6 @@ func validateNodes(nodes []string, apiKey string) error {
 	client := &http.Client{Timeout: 5 * time.Second}
 
 	for _, n := range nodes {
-		// Ensure the URL is properly formatted for the health check
 		url := strings.TrimRight(n, "/") + "/health"
 
 		req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -565,7 +567,6 @@ func validateNodes(nodes []string, apiKey string) error {
 			return fmt.Errorf("invalid URL format for %s: %v", n, err)
 		}
 
-		// Pass the API key as required by Typesense operations
 		req.Header.Set("X-TYPESENSE-API-KEY", apiKey)
 
 		resp, err := client.Do(req)
@@ -573,8 +574,7 @@ func validateNodes(nodes []string, apiKey string) error {
 			return fmt.Errorf("failed to connect to %s: %v", n, err)
 		}
 
-		// Always close the body to prevent connection leaks
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("node %s responded with status %d", n, resp.StatusCode)

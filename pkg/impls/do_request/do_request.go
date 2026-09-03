@@ -66,7 +66,7 @@ func DoRequest[T any](ctx context.Context, c *types.Client, method, path string,
 		}
 
 		respBody, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			c.Nodes.MarkUnhealthy(nodeURL)
 			lastErr = fmt.Errorf("reading response body from %s failed: %w", nodeURL, err)
