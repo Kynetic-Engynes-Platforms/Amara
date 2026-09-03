@@ -54,6 +54,15 @@ func main() {
 	fmt.Println("Amara Shell (aql) v1.0.0")
 	fmt.Println("Type 'help' for available commands, '\\x' for expanded display, '\\q' or 'exit' to quit.")
 
+	defer func() {
+		if r := recover(); r != nil {
+			if r == "aql-exit" {
+				os.Exit(0)
+			}
+			panic(r)
+		}
+	}()
+
 	p := prompt.New(
 		executor,
 		completer,
@@ -175,10 +184,7 @@ func encryptAnsibleVaultStyle(plaintext, key []byte) (string, error) {
 
 	var formattedHex strings.Builder
 	for i := 0; i < len(hexData); i += 80 {
-		end := i + 80
-		if end > len(hexData) {
-			end = len(hexData)
-		}
+		end := min(i+80, len(hexData))
 		formattedHex.WriteString(hexData[i:end])
 		formattedHex.WriteString("\n")
 	}
